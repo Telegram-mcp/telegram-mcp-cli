@@ -169,6 +169,21 @@ class TestTelegramCli(unittest.TestCase):
         src = inspect.getsource(chat.start_interactive_chat)
         self.assertIn("patch_stdout(raw=True)", src)
 
+    def test_print_message_with_bot_buttons(self):
+        # Verify print_message handles buttons with @usernames without stripping text
+        msg_with_bot_buttons = {
+            "id": 1234,
+            "sender": "BOT",
+            "text": "Choose a bot from the list below:",
+            "date": "2026-09-21 12:00:00",
+            "media_type": None,
+            "buttons": [
+                [{"text": "@my_first_bot"}, {"text": "@my_second_bot"}],
+                [{"text": "»"}]
+            ]
+        }
+        print_message(msg_with_bot_buttons)
+
 
 if __name__ == "__main__":
     unittest.main()
