@@ -132,6 +132,11 @@ def main():
     file_parser.add_argument("--caption", help="Optional caption text")
     file_parser.add_argument("--voice", action="store_true", help="Send as round voice note")
 
+    # chat
+    chat_parser = subparsers.add_parser("chat", help="Open an interactive real-time chat session with a bot or user")
+    chat_parser.add_argument("target", help="Bot or chat username (e.g. @my_bot)")
+    chat_parser.add_argument("--history", type=int, default=10, help="Number of initial history messages to load (default: 10)")
+
     # exec
     exec_parser = subparsers.add_parser("exec", help="Execute arbitrary MTProto Python code in client sandbox")
     exec_parser.add_argument("code", help="Python code snippet to execute")
@@ -174,6 +179,9 @@ def main():
             elif args.command == "send-file":
                 sent = await client.send_file(args.target, args.path, caption=args.caption, voice=args.voice)
                 print_success(f"File sent successfully (ID: {sent['id']})")
+            elif args.command == "chat":
+                from cli.chat import start_interactive_chat
+                await start_interactive_chat(client, args.target, history_limit=args.history)
             elif args.command == "exec":
                 tg = await client.connect()
                 local_scope = {"client": tg, "asyncio": asyncio}

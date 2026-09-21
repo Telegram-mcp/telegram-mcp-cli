@@ -83,6 +83,19 @@ class TestTelegramCli(unittest.TestCase):
         print_message(msg_data)
         print_chat_history([msg_data])
 
+    def test_chat_parser(self):
+        import argparse
+        from cli.main import main
+
+        # Verify parser accepts chat subcommand with options
+        with patch("sys.argv", ["tg-cli", "chat", "@my_bot", "--history", "20"]), \
+             patch("cli.main.TelegramCliClient") as mock_client, \
+             patch("cli.main.run_async") as mock_run_async:
+            mock_inst = MagicMock()
+            mock_client.return_value = mock_inst
+            main()
+            self.assertTrue(mock_run_async.called)
+
 
 if __name__ == "__main__":
     unittest.main()

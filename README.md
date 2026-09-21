@@ -37,6 +37,7 @@
 * 🛡️ **Environment Mismatch Shield**: Automatically detects whether your session belongs to the **Test Server** (Sandbox) or **Production Server** and protects against cross-environment auth revocation.
 * 🔒 **Process-Level Session Guard**: Prevents concurrent duplicate connections (`/tmp/telegram-mcp.lock`) to eliminate `AuthKeyDuplicatedError`.
 * 📁 **Rich Terminal Display**: Colorized output, message panels, button trees, and clean tabular diagnostics powered by `rich`.
+* 💬 **Real-Time Interactive Chat (`tg-cli chat <@bot>`)**: Live terminal chat session with background streaming of incoming messages, inline button triggers (`/click`), and history scrolling.
 * ⚡ **Arbitrary MTProto Execution (`tg-cli exec`)**: Direct command-line evaluation of Python MTProto snippets with live client injection.
 
 ---
@@ -119,6 +120,7 @@ tg-cli status
 | `send` | Send formatted text message to a bot/chat | `tg-cli send @mybot "Hello from CLI"` |
 | `command` | Send `/command` and wait for bot reply | `tg-cli command @mybot /start` |
 | `click` | Click inline button by text or index | `tg-cli click @mybot --button "Option 1"` |
+| `chat` | Start interactive live chat session | `tg-cli chat @mybot` |
 | `history` | Fetch recent conversation history | `tg-cli history @mybot --limit 10` |
 | `send-file` | Upload photo, document, or audio | `tg-cli send-file @mybot doc.pdf` |
 | `exec` | Execute MTProto Python snippet | `tg-cli exec "await client.get_me()"` |

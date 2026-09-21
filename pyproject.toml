@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telegram-mcp-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Command-line interface and bot automation controller for Telegram"
 authors = [{ name = "Abhinav M", email = "fire162@users.noreply.github.com" }]
 readme = "README.md"
@@ -14,6 +14,7 @@ dependencies = [
     "telethon>=1.36.0",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
+    "prompt-toolkit>=3.0.0",
 ]
 
 [project.urls]
