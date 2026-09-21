@@ -78,9 +78,14 @@ def print_message(msg: Dict[str, Any]):
 
     title = f"[{sender_style}]{sender}[/{sender_style}] (ID: {msg.get('id')}) - {msg.get('date', '')}"
     
-    content = msg.get("text") or "[italic dim](No text)[/italic dim]"
+    raw_text = msg.get("text")
+    if raw_text:
+        content = Text(raw_text)
+    else:
+        content = Text("(No text)", style="italic dim")
+
     if msg.get("media_type"):
-        content += f"\n[dim yellow]📎 Media: {msg['media_type']}[/dim yellow]"
+        content.append(f"\n📎 Media: {msg['media_type']}", style="dim yellow")
     
     console.print(Panel(content, title=title, border_style=border_color, expand=False))
     
@@ -88,7 +93,7 @@ def print_message(msg: Dict[str, Any]):
     if buttons:
         btn_table = Table(show_header=False, box=None, padding=(0, 1))
         for row in buttons:
-            row_texts = [f"[bold cyan][[{b.get('text')}][/bold cyan]" for b in row]
+            row_texts = [Text(f"[{b.get('text', '')}]", style="bold cyan") for b in row]
             btn_table.add_row(*row_texts)
         console.print(btn_table)
 
