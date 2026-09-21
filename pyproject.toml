@@ -8,13 +8,19 @@ version = "0.1.0"
 description = "Command-line interface and bot automation controller for Telegram"
 authors = [{ name = "Abhinav M", email = "fire162@users.noreply.github.com" }]
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "telethon>=1.36.0",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Telegram-mcp/telegram-mcp-cli"
+Repository = "https://github.com/Telegram-mcp/telegram-mcp-cli"
+Documentation = "https://github.com/Telegram-mcp/telegram-mcp-cli#readme"
+"Bug Tracker" = "https://github.com/Telegram-mcp/telegram-mcp-cli/issues"
 
 [project.scripts]
 tg-cli = "cli.main:main"

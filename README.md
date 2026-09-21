@@ -4,6 +4,7 @@
 
 ### Modern Command-Line Interface & Bot Automation Controller for Telegram
 
+[![PyPI](https://img.shields.io/pypi/v/telegram-mcp-cli.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/telegram-mcp-cli/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Telethon](https://img.shields.io/badge/Powered%20By-Telethon-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://github.com/LonamiWebs/Telethon)
@@ -74,6 +75,12 @@ flowchart TD
 
 ### 1. Installation
 
+**From PyPI (Recommended):**
+```bash
+pip install telegram-mcp-cli
+```
+
+**From Source:**
 ```bash
 git clone https://github.com/Telegram-mcp/telegram-mcp-cli.git
 cd telegram-mcp-cli
