@@ -28,8 +28,11 @@ This guide documents the architecture, commands, development workflow, and conve
 ├── LICENSE                # MIT License
 ├── cli/
 │   ├── __init__.py        # Package exports
+│   ├── auth.py            # Session validation & login workflows
+│   ├── chat.py            # Real-time interactive terminal chat session
 │   ├── config.py          # Configuration loading & .env updater
-│   ├── client.py          # Telethon MTProto client & lock manager
+│   ├── client.py          # Telethon MTProto client
+│   ├── lock.py            # Exclusive process lock manager & diagnostics
 │   ├── main.py            # CLI argument parsing and subcommands
 │   └── output.py          # Rich terminal renderers
 └── tests/
@@ -55,25 +58,31 @@ This guide documents the architecture, commands, development workflow, and conve
    - Points to a `.session` file path, validates SQLite integrity and DC environment, and saves `TELEGRAM_SESSION_PATH` and aligned `TELEGRAM_TEST_MODE` to `.env`.
    - Run `tg-cli auth login` for interactive phone/code or QR login.
 
-2. `tg-cli status`
+2. `tg-cli status [--force]`
    - Checks client authorization, active user metadata, and verifies environment alignment (Test vs. Production).
 
-3. `tg-cli send <target> <text> [--reply-to ID]`
+3. `tg-cli unlock`
+   - Inspects `/tmp/telegram-mcp.lock`, terminates conflicting process holding the lock, and safely releases the lock.
+
+4. `tg-cli chat <target> [--history N] [--force]`
+   - Starts a full two-way interactive live terminal chat with real-time incoming message polling, button clicking (`/click`), and prompt-toolkit input handling.
+
+5. `tg-cli send <target> <text> [--reply-to ID]`
    - Sends formatted messages to bots or chats.
 
-4. `tg-cli command <target> <cmd> [--no-wait] [--timeout SECONDS]`
+6. `tg-cli command <target> <cmd> [--no-wait] [--timeout SECONDS]`
    - Sends slash commands like `/start` or `/help` and displays the bot's reply and buttons.
 
-5. `tg-cli history <target> [--limit N]`
+7. `tg-cli history <target> [--limit N]`
    - Prints chat conversation history formatted with panels and timestamps.
 
-6. `tg-cli click <target> [--button TEXT] [--index N] [--msg-id ID]`
+8. `tg-cli click <target> [--button TEXT] [--index N] [--msg-id ID]`
    - Clicks inline keyboard callback buttons.
 
-7. `tg-cli send-file <target> <file_path> [--caption TEXT] [--voice]`
+9. `tg-cli send-file <target> <file_path> [--caption TEXT] [--voice]`
    - Sends files, photos, audio, or circular voice notes.
 
-8. `tg-cli exec <code>`
+10. `tg-cli exec <code>`
    - Executes arbitrary Telethon Python snippets directly in the MTProto client context.
 
 ---
