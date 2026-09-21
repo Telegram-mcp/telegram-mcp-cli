@@ -83,6 +83,53 @@ class TestTelegramCli(unittest.TestCase):
         print_message(msg_data)
         print_chat_history([msg_data])
 
+    def test_format_msg_sender_types(self):
+        client = TelegramCliClient({})
+        
+        # Outgoing message -> YOU
+        msg_out = MagicMock()
+        msg_out.out = True
+        msg_out.sender = None
+        msg_out.id = 100
+        msg_out.date = None
+        msg_out.text = "Hello"
+        msg_out.buttons = None
+        msg_out.photo = None
+        msg_out.voice = None
+        msg_out.audio = None
+        msg_out.document = None
+        self.assertEqual(client._format_msg(msg_out)["sender"], "YOU")
+
+        # Incoming from bot
+        msg_in_bot = MagicMock()
+        msg_in_bot.out = False
+        msg_in_bot.sender = None
+        msg_in_bot.id = 101
+        msg_in_bot.date = None
+        msg_in_bot.text = "Bot reply"
+        msg_in_bot.buttons = None
+        msg_in_bot.photo = None
+        msg_in_bot.voice = None
+        msg_in_bot.audio = None
+        msg_in_bot.document = None
+        bot_peer = MagicMock(bot=True, broadcast=False, megagroup=False)
+        self.assertEqual(client._format_msg(msg_in_bot, peer_entity=bot_peer)["sender"], "BOT")
+
+        # Incoming from human user
+        msg_in_user = MagicMock()
+        msg_in_user.out = False
+        msg_in_user.sender = None
+        msg_in_user.id = 102
+        msg_in_user.date = None
+        msg_in_user.text = "Hey there"
+        msg_in_user.buttons = None
+        msg_in_user.photo = None
+        msg_in_user.voice = None
+        msg_in_user.audio = None
+        msg_in_user.document = None
+        user_peer = MagicMock(bot=False, broadcast=False, megagroup=False, first_name="Alex", title=None)
+        self.assertEqual(client._format_msg(msg_in_user, peer_entity=user_peer)["sender"], "USER")
+
     def test_chat_parser(self):
         import argparse
         from cli.main import main
