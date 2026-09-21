@@ -75,7 +75,7 @@ async def start_interactive_chat(client: TelegramCliClient, target: str, history
     session: PromptSession = PromptSession()
 
     try:
-        with patch_stdout():
+        with patch_stdout(raw=True):
             while True:
                 try:
                     user_input = await session.prompt_async(prompt_label)

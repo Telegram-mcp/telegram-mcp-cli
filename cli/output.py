@@ -66,7 +66,8 @@ def print_message(msg: Dict[str, Any]):
     if msg.get("media_type"):
         content += f"\n[dim yellow]📎 Media: {msg['media_type']}[/dim yellow]"
     
-    console.print(Panel(content, title=title, expand=False))
+    border_color = "blue" if sender == "user" else "magenta"
+    console.print(Panel(content, title=title, border_style=border_color, expand=False))
     
     buttons = msg.get("buttons")
     if buttons:

@@ -115,6 +115,13 @@ class TestTelegramCli(unittest.TestCase):
             main()
             mock_client.assert_called_with(unittest.mock.ANY, force=True)
 
+    def test_chat_patch_stdout_raw(self):
+        import inspect
+        from cli import chat
+        # Inspect source code of start_interactive_chat to guarantee patch_stdout(raw=True) is used
+        src = inspect.getsource(chat.start_interactive_chat)
+        self.assertIn("patch_stdout(raw=True)", src)
+
 
 if __name__ == "__main__":
     unittest.main()
