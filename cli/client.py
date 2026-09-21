@@ -2,6 +2,8 @@ import os
 import sys
 import fcntl
 import asyncio
+import signal
+import time
 from typing import Optional, Dict, Any, List, Union
 from telethon import TelegramClient, custom, errors
 from telethon.sessions import StringSession, SQLiteSession
@@ -19,6 +21,73 @@ TELEGRAM_TEST_IPS = {
 }
 
 
+def get_lock_pid() -> Optional[int]:
+    if not os.path.exists(LOCKFILE_PATH):
+        return None
+    try:
+        with open(LOCKFILE_PATH, "r") as f:
+            for line in f:
+                if line.startswith("pid="):
+                    return int(line.strip().split("=")[1])
+    except Exception:
+        pass
+    return None
+
+
+def get_process_info(pid: int) -> Optional[str]:
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            cmd = f.read().replace(b"\x00", b" ").decode("utf-8", "replace").strip()
+            return cmd or None
+    except Exception:
+        return None
+
+
+def kill_process(pid: int, timeout: float = 1.0) -> bool:
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            os.kill(pid, 0)
+            time.sleep(0.05)
+        except ProcessLookupError:
+            return True
+
+    try:
+        os.kill(pid, signal.SIGKILL)
+        return True
+    except Exception:
+        return False
+
+
+def unlock_session() -> Dict[str, Any]:
+    pid = get_lock_pid()
+    killed = []
+    if pid and pid != os.getpid():
+        info = get_process_info(pid)
+        if kill_process(pid):
+            killed.append({"pid": pid, "cmd": info})
+
+    removed_lockfile = False
+    if os.path.exists(LOCKFILE_PATH):
+        try:
+            os.unlink(LOCKFILE_PATH)
+            removed_lockfile = True
+        except Exception:
+            pass
+
+    return {
+        "killed": killed,
+        "removed_lockfile": removed_lockfile,
+    }
+
+
 def detect_session_environment(session_or_address: Any) -> str:
     if hasattr(session_or_address, "server_address"):
         addr = getattr(session_or_address, "server_address", None)
@@ -34,26 +103,40 @@ def detect_session_environment(session_or_address: Any) -> str:
 
 
 class TelegramCliClient:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], force: bool = False):
         self.config = config
+        self.force = force or bool(config.get("force", False))
         self.client: Optional[TelegramClient] = None
         self._lock_fd: Optional[int] = None
         self.session_mode: Optional[str] = None
         self.session_file_path: Optional[str] = None
         self.session_environment: Optional[str] = None
 
-    def acquire_lock(self):
+    def acquire_lock(self, force: Optional[bool] = None):
         if self._lock_fd is not None:
             return
+
+        should_force = self.force if force is None else force
+        if should_force:
+            unlock_session()
+
         fd = os.open(LOCKFILE_PATH, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
             os.close(fd)
+            pid = get_lock_pid()
+            info = f"PID {pid}" if pid else "Another process"
+            if pid:
+                cmd = get_process_info(pid)
+                if cmd:
+                    info += f" ({cmd})"
             raise RuntimeError(
-                "Another telegram-mcp or CLI process is currently active. "
-                "Simultaneous sessions risk key revocation. "
-                "Please terminate the other process or check /tmp/telegram-mcp.lock."
+                f"Another process is currently holding the Telegram session lock: {info}.\n"
+                f"Simultaneous connections risk key revocation.\n\n"
+                f"👉 To resolve:\n"
+                f"  • Run 'tg-cli unlock' to terminate the conflicting process and free the lock\n"
+                f"  • Or run with '--force' (e.g. 'tg-cli chat @bot --force') to take over the session automatically."
             )
         os.write(fd, f"pid={os.getpid()}\n".encode())
         os.fsync(fd)

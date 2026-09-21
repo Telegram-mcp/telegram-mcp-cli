@@ -96,6 +96,25 @@ class TestTelegramCli(unittest.TestCase):
             main()
             self.assertTrue(mock_run_async.called)
 
+    def test_unlock_command(self):
+        from cli.main import main
+        from cli.client import unlock_session
+
+        with patch("sys.argv", ["tg-cli", "unlock"]), \
+             patch("cli.client.unlock_session", return_value={"killed": [{"pid": 9999, "cmd": "dummy"}], "removed_lockfile": True}):
+            main()
+
+    def test_force_flag(self):
+        from cli.main import main
+
+        with patch("sys.argv", ["tg-cli", "--force", "status"]), \
+             patch("cli.main.TelegramCliClient") as mock_client, \
+             patch("cli.main.run_async") as mock_run_async:
+            mock_inst = MagicMock()
+            mock_client.return_value = mock_inst
+            main()
+            mock_client.assert_called_with(unittest.mock.ANY, force=True)
+
 
 if __name__ == "__main__":
     unittest.main()

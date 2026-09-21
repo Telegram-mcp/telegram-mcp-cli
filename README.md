@@ -124,6 +124,7 @@ tg-cli status
 | `history` | Fetch recent conversation history | `tg-cli history @mybot --limit 10` |
 | `send-file` | Upload photo, document, or audio | `tg-cli send-file @mybot doc.pdf` |
 | `exec` | Execute MTProto Python snippet | `tg-cli exec "await client.get_me()"` |
+| `unlock` | Release session lock & terminate conflicting process | `tg-cli unlock` |
 
 ---
 
@@ -133,6 +134,8 @@ tg-cli status
 > Telegram permanently revokes authorization keys if multiple processes connect with the same session key simultaneously (`AuthKeyDuplicatedError`).
 
 * **File Locking**: `tg-cli` uses `/tmp/telegram-mcp.lock` to ensure no two processes use the session concurrently.
+* **Instant Lock Clearing (`tg-cli unlock`)**: If a background MCP server or orphaned process holds the lock, run `tg-cli unlock` to cleanly terminate it and free the lock.
+* **Force Takeover (`--force`)**: Pass `--force` to any command (e.g. `tg-cli chat @bot --force` or `tg-cli status --force`) to automatically terminate conflicting background processes before connecting.
 * **Environment Matching**: Test Server sessions (DC 2 Sandbox) and Production sessions cannot be cross-connected. The CLI will abort with a clear warning before Telegram revokes the key.
 
 ---

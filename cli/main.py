@@ -78,6 +78,20 @@ def handle_auth(args):
     print_success(f"Environment auto-aligned to: TELEGRAM_TEST_MODE={'true' if detected_env == 'test' else 'false'}")
 
 
+def handle_unlock():
+    from cli.client import unlock_session
+    res = unlock_session()
+    if res["killed"]:
+        for p in res["killed"]:
+            print_success(f"Terminated conflicting process PID {p['pid']} ({p.get('cmd') or 'unknown'})")
+    if res["removed_lockfile"]:
+        print_success("Removed /tmp/telegram-mcp.lock")
+    if not res["killed"] and not res["removed_lockfile"]:
+        console.print("[bold green]✓[/bold green] No active session lock or conflicting process found.")
+    else:
+        print_success("Session lock released successfully. You can now run tg-cli commands.")
+
+
 def run_async(coro):
     try:
         return asyncio.run(coro)
@@ -87,58 +101,74 @@ def run_async(coro):
 
 
 def main():
+    common_parser = argparse.ArgumentParser(add_help=False)
+    common_parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Force takeover of session lock by terminating conflicting background processes"
+    )
+
     parser = argparse.ArgumentParser(
         prog="tg-cli",
+        parents=[common_parser],
         description="Telegram MCP CLI: Interact with and test Telegram bots directly from terminal."
     )
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
+    # unlock
+    subparsers.add_parser(
+        "unlock",
+        parents=[common_parser],
+        help="Release session lock and terminate any conflicting background process"
+    )
+
     # auth
-    auth_parser = subparsers.add_parser("auth", help="Configure session file path or run interactive login")
+    auth_parser = subparsers.add_parser("auth", parents=[common_parser], help="Configure session file path or run interactive login")
     auth_parser.add_argument("session_file", nargs="?", help="Path to .session file, or 'login' for interactive flow")
 
     # status
-    subparsers.add_parser("status", help="Check client connection, environment, and authorization status")
+    subparsers.add_parser("status", parents=[common_parser], help="Check client connection, environment, and authorization status")
 
     # send
-    send_parser = subparsers.add_parser("send", help="Send a message to a bot or chat")
+    send_parser = subparsers.add_parser("send", parents=[common_parser], help="Send a message to a bot or chat")
     send_parser.add_argument("target", help="Bot or chat username (e.g. @bot or bot)")
     send_parser.add_argument("text", help="Text payload to send")
     send_parser.add_argument("--reply-to", type=int, help="Optional message ID to reply to")
 
     # command
-    cmd_parser = subparsers.add_parser("command", help="Send a command (e.g. /start) and await reply")
+    cmd_parser = subparsers.add_parser("command", parents=[common_parser], help="Send a command (e.g. /start) and await reply")
     cmd_parser.add_argument("target", help="Bot username")
     cmd_parser.add_argument("cmd", help="Command string (e.g. /start, /help)")
     cmd_parser.add_argument("--no-wait", action="store_true", help="Do not wait for bot reply")
     cmd_parser.add_argument("--timeout", type=int, default=10, help="Wait timeout in seconds (default: 10)")
 
     # history
-    hist_parser = subparsers.add_parser("history", help="Retrieve recent message history")
+    hist_parser = subparsers.add_parser("history", parents=[common_parser], help="Retrieve recent message history")
     hist_parser.add_argument("target", help="Bot or chat username")
     hist_parser.add_argument("--limit", type=int, default=10, help="Number of messages (default: 10)")
 
     # click
-    click_parser = subparsers.add_parser("click", help="Click an inline keyboard button")
+    click_parser = subparsers.add_parser("click", parents=[common_parser], help="Click an inline keyboard button")
     click_parser.add_argument("target", help="Bot username")
     click_parser.add_argument("--button", help="Button label text (case-insensitive substring)")
     click_parser.add_argument("--index", type=int, help="Button 0-based index")
     click_parser.add_argument("--msg-id", type=int, help="Specific message ID (default: latest message with buttons)")
 
     # send-file
-    file_parser = subparsers.add_parser("send-file", help="Upload a file, photo, or audio")
+    file_parser = subparsers.add_parser("send-file", parents=[common_parser], help="Upload a file, photo, or audio")
     file_parser.add_argument("target", help="Bot or chat username")
     file_parser.add_argument("path", help="Local file path")
     file_parser.add_argument("--caption", help="Optional caption text")
     file_parser.add_argument("--voice", action="store_true", help="Send as round voice note")
 
     # chat
-    chat_parser = subparsers.add_parser("chat", help="Open an interactive real-time chat session with a bot or user")
+    chat_parser = subparsers.add_parser("chat", parents=[common_parser], help="Open an interactive real-time chat session with a bot or user")
     chat_parser.add_argument("target", help="Bot or chat username (e.g. @my_bot)")
     chat_parser.add_argument("--history", type=int, default=10, help="Number of initial history messages to load (default: 10)")
 
     # exec
-    exec_parser = subparsers.add_parser("exec", help="Execute arbitrary MTProto Python code in client sandbox")
+    exec_parser = subparsers.add_parser("exec", parents=[common_parser], help="Execute arbitrary MTProto Python code in client sandbox")
     exec_parser.add_argument("code", help="Python code snippet to execute")
 
     args = parser.parse_args()
@@ -146,12 +176,16 @@ def main():
         parser.print_help()
         sys.exit(0)
 
+    if args.command == "unlock":
+        handle_unlock()
+        return
+
     if args.command == "auth":
         handle_auth(args)
         return
 
     config = load_config()
-    client = TelegramCliClient(config)
+    client = TelegramCliClient(config, force=getattr(args, "force", False))
 
     async def execute():
         try:
