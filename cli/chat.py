@@ -55,7 +55,7 @@ async def start_interactive_chat(client: TelegramCliClient, target: str, history
     @tg.on(events.NewMessage(chats=entity))
     async def on_new_message(event):
         nonlocal latest_button_msg_id
-        msg_data = client._format_msg(event.message)
+        msg_data = client._format_msg(event.message, peer_entity=entity)
         if msg_data.get("buttons"):
             latest_button_msg_id = msg_data["id"]
         if not event.out:
@@ -64,7 +64,7 @@ async def start_interactive_chat(client: TelegramCliClient, target: str, history
     @tg.on(events.MessageEdited(chats=entity))
     async def on_message_edited(event):
         nonlocal latest_button_msg_id
-        msg_data = client._format_msg(event.message)
+        msg_data = client._format_msg(event.message, peer_entity=entity)
         if msg_data.get("buttons"):
             latest_button_msg_id = msg_data["id"]
         if not event.out:

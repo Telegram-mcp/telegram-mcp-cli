@@ -242,7 +242,7 @@ class TelegramCliClient:
             return f"@{p}"
         return p
 
-    def _format_msg(self, msg) -> Dict[str, Any]:
+    def _format_msg(self, msg, peer_entity: Any = None) -> Dict[str, Any]:
         buttons = None
         if getattr(msg, "buttons", None):
             buttons = []
@@ -263,9 +263,26 @@ class TelegramCliClient:
             media_type = "document"
 
         date_str = msg.date.strftime("%Y-%m-%d %H:%M:%S") if getattr(msg, "date", None) else ""
+
+        if getattr(msg, "out", False):
+            sender_label = "YOU"
+        else:
+            sender_obj = getattr(msg, "sender", None) or peer_entity
+            if sender_obj:
+                if getattr(sender_obj, "bot", False):
+                    sender_label = "BOT"
+                elif getattr(sender_obj, "broadcast", False):
+                    sender_label = "CHANNEL"
+                elif getattr(sender_obj, "megagroup", False) or (getattr(sender_obj, "title", None) and not getattr(sender_obj, "first_name", None)):
+                    sender_label = "GROUP"
+                else:
+                    sender_label = "USER"
+            else:
+                sender_label = "USER"
+
         return {
             "id": msg.id,
-            "sender": "user" if getattr(msg, "out", False) else "bot",
+            "sender": sender_label,
             "text": getattr(msg, "text", "") or "",
             "date": date_str,
             "media_type": media_type,
@@ -299,18 +316,26 @@ class TelegramCliClient:
             },
         }
 
-    async def send_message(self, target: str, text: str, reply_to: Optional[int] = None) -> Dict[str, Any]:
+    async def _resolve_entity_and_peer(self, target: str):
         client = await self.connect()
-        peer = await client.get_input_entity(self._clean_peer(target))
+        clean = self._clean_peer(target)
+        try:
+            peer_entity = await client.get_entity(clean)
+        except Exception:
+            peer_entity = None
+        peer = await client.get_input_entity(clean)
+        return client, peer, peer_entity
+
+    async def send_message(self, target: str, text: str, reply_to: Optional[int] = None) -> Dict[str, Any]:
+        client, peer, peer_entity = await self._resolve_entity_and_peer(target)
         sent = await client.send_message(peer, text, reply_to=reply_to)
-        return self._format_msg(sent)
+        return self._format_msg(sent, peer_entity=peer_entity)
 
     async def send_command(self, target: str, command: str, wait_response: bool = True, timeout: int = 10) -> Dict[str, Any]:
-        client = await self.connect()
+        client, peer, peer_entity = await self._resolve_entity_and_peer(target)
         cmd = command.strip()
         if not cmd.startswith("/"):
             cmd = f"/{cmd}"
-        peer = await client.get_input_entity(self._clean_peer(target))
         sent = await client.send_message(peer, cmd)
         
         reply_dict = None
@@ -321,19 +346,18 @@ class TelegramCliClient:
                 msgs = await client.get_messages(peer, limit=5)
                 for m in msgs:
                     if not m.out and m.id > sent.id:
-                        reply_dict = self._format_msg(m)
+                        reply_dict = self._format_msg(m, peer_entity=peer_entity)
                         break
                 if reply_dict:
                     break
                 await asyncio.sleep(poll_interval)
 
-        return {"command_sent": self._format_msg(sent), "reply": reply_dict}
+        return {"command_sent": self._format_msg(sent, peer_entity=peer_entity), "reply": reply_dict}
 
     async def get_history(self, target: str, limit: int = 10) -> List[Dict[str, Any]]:
-        client = await self.connect()
-        peer = await client.get_input_entity(self._clean_peer(target))
+        client, peer, peer_entity = await self._resolve_entity_and_peer(target)
         msgs = await client.get_messages(peer, limit=limit)
-        return [self._format_msg(m) for m in msgs]
+        return [self._format_msg(m, peer_entity=peer_entity) for m in msgs]
 
     async def click_button(self, target: str, button_text: Optional[str] = None, button_index: Optional[int] = None, message_id: Optional[int] = None) -> Dict[str, Any]:
         client = await self.connect()
@@ -378,10 +402,9 @@ class TelegramCliClient:
         return {"clicked": clicked_btn, "message_id": target_msg.id}
 
     async def send_file(self, target: str, file_path: str, caption: Optional[str] = None, voice: bool = False) -> Dict[str, Any]:
-        client = await self.connect()
+        client, peer, peer_entity = await self._resolve_entity_and_peer(target)
         resolved = os.path.abspath(os.path.expanduser(file_path))
         if not os.path.exists(resolved):
             raise FileNotFoundError(f"File not found: {resolved}")
-        peer = await client.get_input_entity(self._clean_peer(target))
         sent = await client.send_file(peer, resolved, caption=caption, voice_note=voice)
-        return self._format_msg(sent)
+        return self._format_msg(sent, peer_entity=peer_entity)

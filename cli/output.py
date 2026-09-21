@@ -58,15 +58,30 @@ def print_status_table(status: Dict[str, Any]):
 
 
 def print_message(msg: Dict[str, Any]):
-    sender = msg.get("sender", "bot")
-    sender_style = "bold blue" if sender == "user" else "bold magenta"
-    title = f"[{sender_style}]{sender.upper()}[/{sender_style}] (ID: {msg.get('id')}) - {msg.get('date', '')}"
+    sender = str(msg.get("sender", "USER")).upper()
+    if sender in ("YOU", "USER_OUT", "ME"):
+        sender = "YOU"
+        sender_style = "bold blue"
+        border_color = "blue"
+    elif sender == "BOT":
+        sender_style = "bold magenta"
+        border_color = "magenta"
+    elif sender == "USER":
+        sender_style = "bold green"
+        border_color = "green"
+    elif sender in ("CHANNEL", "GROUP"):
+        sender_style = "bold cyan"
+        border_color = "cyan"
+    else:
+        sender_style = "bold yellow"
+        border_color = "yellow"
+
+    title = f"[{sender_style}]{sender}[/{sender_style}] (ID: {msg.get('id')}) - {msg.get('date', '')}"
     
     content = msg.get("text") or "[italic dim](No text)[/italic dim]"
     if msg.get("media_type"):
         content += f"\n[dim yellow]📎 Media: {msg['media_type']}[/dim yellow]"
     
-    border_color = "blue" if sender == "user" else "magenta"
     console.print(Panel(content, title=title, border_style=border_color, expand=False))
     
     buttons = msg.get("buttons")
